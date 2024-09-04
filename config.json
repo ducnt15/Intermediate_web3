@@ -1,17 +1,22 @@
 {
   "chain": "ethereum",
-  "gpc": "https://eth-mainnet.nodereal.io/v1/0b60939cd0554f5f9b079641c5be9ff2",
-  "usersTracking": "0x2D623d3deC2F0b0217ccfB689E1642D84CA845FB",
-  "tokens": [
-    {
-      "symbol": "ETH",
-      "contract_address": ""
+  "rpc": "https://eth-mainnet.nodereal.io/v1/0b60939cd0554f5f9b079641c5be9ff2",
+  "chainSymbol": "ETH",
+  "usersTracking": "0xb280FCfAB101872E7216B7090f51D1ee0f685ddd",
+  "trackingTokensConfig": {
+    "0xdac17f958d2ee523a2206206994597c13d831ec7": {
+      "TokenName": "Tether USD",
+      "Symbol": "USDT",
+      "Decimals": 6
     },
-    {
-      "symbol": "USDT",
-      "contract_address": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": {
+      "TokenName": "USD Coin",
+      "Symbol": "USDC",
+      "Decimals": 6
     }
+  },
+  "listTokensTracking": [
+    "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
   ]
 }
-
-
