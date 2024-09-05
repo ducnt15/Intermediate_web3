@@ -1,6 +1,7 @@
 package tracker
 
 import (
+	"Intermediate_web3/internal/api"
 	token "Intermediate_web3/internal/erc20"
 	"Intermediate_web3/internal/models"
 	"context"
@@ -10,11 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/joho/godotenv"
-	"io"
 	"math/big"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,45 +28,15 @@ var (
 		MapListTokens map[string]bool
 		UsersTracking string
 	})
-	TelegramBotToken string
-	groupId          int64
-	config           *models.ChainConfig
+	config *models.ChainConfig
 )
 
 func init() {
 	var err error
-	err = loadEnv()
+	config, err = loadConfig()
 	if err != nil {
 		panic(err)
 	}
-
-	config, err = loadConfig("config.json")
-	if err != nil {
-		panic(err)
-	}
-	initConfig()
-}
-
-func loadConfig(filePath string) (*models.ChainConfig, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("error opening config file: %w", err)
-	}
-	defer file.Close()
-
-	byteValue, err := io.ReadAll(file)
-	if err != nil {
-		return nil, fmt.Errorf("error reading config file: %w", err)
-	}
-
-	err = json.Unmarshal(byteValue, &config)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling json: %w", err)
-	}
-	return config, nil
-}
-
-func initConfig() {
 	mapListTracking[config.Chain] = struct {
 		MapListTokens map[string]bool
 		UsersTracking string
@@ -76,25 +46,21 @@ func initConfig() {
 	}
 
 	for _, tokenTracking := range config.ListTokensTracking {
-		mapListTracking[config.Chain].MapListTokens[tokenTracking] = true
+		mapListTracking[config.Chain].MapListTokens[strings.ToLower(tokenTracking)] = true
 	}
 }
 
-func loadEnv() error {
-	err := godotenv.Load(".env")
+func loadConfig() (*models.ChainConfig, error) {
+	byteValue, err := os.ReadFile("config.json")
 	if err != nil {
-		return fmt.Errorf("failed to load .env file: %v", err)
+		return nil, fmt.Errorf("error reading config file: %w", err)
 	}
 
-	TelegramBotToken = os.Getenv("TELEGRAM_BOT_TOKEN")
-
-	groupIdStr := os.Getenv("TELEGRAM_CHAT_ID")
-
-	groupId, err = strconv.ParseInt(groupIdStr, 10, 64)
+	err = json.Unmarshal(byteValue, &config)
 	if err != nil {
-		return fmt.Errorf("failed to parse GROUPCHAT_ID: %v", err)
+		return nil, fmt.Errorf("error unmarshalling json: %w", err)
 	}
-	return nil
+	return config, nil
 }
 
 func tracker(chainConfig models.ChainConfig) error {
@@ -113,12 +79,12 @@ func tracker(chainConfig models.ChainConfig) error {
 	//	return fmt.Errorf("failed to get the latest block header: %v", err)
 	//}
 	//blockNumber := header.Number
-	blockNumber := big.NewInt(20675517)
+	blockNumber := big.NewInt(20677836)
 	for {
 		block, err := client.BlockByNumber(context.Background(), blockNumber)
 		if err != nil && err.Error() == ethereum.NotFound.Error() {
 			fmt.Printf("Block %v not found yet. Waiting...", blockNumber)
-			time.Sleep(12 * time.Second) // Wait
+			time.Sleep(12 * time.Second)
 			continue
 		}
 		if err != nil {
@@ -133,7 +99,6 @@ func tracker(chainConfig models.ChainConfig) error {
 			if err != nil {
 				fmt.Printf("Failed to track native token: %v", err)
 			}
-
 			// check stable token use logs transfer in transactions
 			er := handleErc20TokenTracking(client, tx, chainConfig)
 			if er != nil {
@@ -147,9 +112,9 @@ func tracker(chainConfig models.ChainConfig) error {
 func trackingNativeToken(tx *types.Transaction, chainConfig models.ChainConfig, chainID *big.Int) error {
 	nativeTransfer := checkNativeToken(tx, chainConfig, chainID)
 	if nativeTransfer != nil {
-		er := notifyTelegram(*nativeTransfer, chainConfig)
-		if er != nil {
-			return er
+		err := notifyAndSaveDB(nativeTransfer, chainConfig)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -162,23 +127,21 @@ func handleErc20TokenTracking(client *ethclient.Client, tx *types.Transaction, c
 		return err
 	}
 
-	for _, vLog := range receipt.Logs {
-		tokenFilterer, err := token.NewStoreFilterer(vLog.Address, client)
-		if err != nil {
+	for _, log := range receipt.Logs {
+		tokenFilterer, er := token.NewStoreFilterer(log.Address, client)
+		if er != nil {
 			fmt.Printf("failed to create token filterer: %v", err)
 			continue
 		}
-		transfer, err := tokenFilterer.ParseTransfer(*vLog)
-		if err != nil {
-			fmt.Printf(err.Error())
+		transfer, e := tokenFilterer.ParseTransfer(*log)
+		if e != nil {
+			fmt.Printf(e.Error())
 			continue
 		}
-
-		tokenAddress := vLog.Address.Hex()
+		tokenAddress := strings.ToLower(log.Address.Hex())
 		if !isTokenTracked(tokenAddress, chainConfig.Chain) {
 			continue
 		}
-
 		fromAddr, toAddr, amount, err := checkTransferLog(transfer, chainConfig.Chain)
 		if err != nil {
 			continue
@@ -199,7 +162,7 @@ func handleErc20TokenTracking(client *ethclient.Client, tx *types.Transaction, c
 			Token:           tokenAddress,
 		}
 
-		er := notifyTelegram(trackingInfo, chainConfig)
+		er = notifyAndSaveDB(&trackingInfo, chainConfig)
 		if er != nil {
 			fmt.Printf("failed to save tracking info: %v", er)
 		}
@@ -251,9 +214,10 @@ func checkNativeToken(tx *types.Transaction, config models.ChainConfig, chainId 
 	fmt.Print(trackingInfo)
 	return trackingInfo
 }
+
 func checkTransferLog(transfer *token.StoreTransfer, chain string) (string, string, *big.Int, error) {
-	fromAddress := transfer.From.Hex()
-	toAddress := transfer.To.Hex()
+	fromAddress := strings.ToLower(transfer.From.Hex())
+	toAddress := strings.ToLower(transfer.To.Hex())
 
 	if !isUserTracked(fromAddress, chain) && !isUserTracked(toAddress, chain) {
 		return "", "", nil, fmt.Errorf("not tracking this user")
@@ -261,23 +225,30 @@ func checkTransferLog(transfer *token.StoreTransfer, chain string) (string, stri
 	return fromAddress, toAddress, transfer.Value, nil
 }
 
-func notifyTelegram(trackingInfo models.TrackingInformation, chainConfig models.ChainConfig) error {
+func notifyAndSaveDB(trackingInfo *models.TrackingInformation, chainConfig models.ChainConfig) error {
 	tokenSymbol := ""
 	switch trackingInfo.Type {
 	case TypeTokenNative:
 		tokenSymbol = chainConfig.ChainSymbol
 	case TypeTokenERC20:
-		tokenTrackingConfig, exist := chainConfig.TrackingTokensConfig[trackingInfo.Token]
-		if exist {
+		tokenTrackingConfig, ok := chainConfig.TrackingTokensConfig[trackingInfo.Token]
+		if ok {
 			tokenSymbol = tokenTrackingConfig.Symbol
 		}
 	default:
 	}
+
+	err := api.SaveDB(trackingInfo)
+	if err != nil {
+		fmt.Printf("failed to save tracking info: %v", err)
+	}
+
 	message := fmt.Sprintf(`Chain: %s
-		Transaction: %s
-		Transfering %s %s from %s to %s`, trackingInfo.Chain,
+			Transaction: %s
+			Transfering %s %s from %s to %s`, trackingInfo.Chain,
 		trackingInfo.TransactionHash, trackingInfo.Amount, tokenSymbol, trackingInfo.From, trackingInfo.To)
-	err := sendMessage(message)
+
+	err = sendMessage(message)
 	if err != nil {
 		return err
 	}
@@ -285,10 +256,15 @@ func notifyTelegram(trackingInfo models.TrackingInformation, chainConfig models.
 }
 
 func sendMessage(message string) error {
-
+	TelegramBotToken := os.Getenv("TELEGRAM_BOT_TOKEN")
+	groupIdStr := os.Getenv("TELEGRAM_CHAT_ID")
 	bot, err := tgbotapi.NewBotAPI(TelegramBotToken)
 	if err != nil {
 		fmt.Println(err)
+	}
+	groupId, err := strconv.ParseInt(groupIdStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse GROUPCHAT_ID: %v", err)
 	}
 	chatId, err := strconv.Atoi(strconv.FormatInt(groupId, 10))
 	if err != nil {
