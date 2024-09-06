@@ -102,7 +102,7 @@ func GetPaginatedTracking(ctx context.Context, db *bun.DB, page int, pageSize in
 	return tracking, nil
 }
 
-func GetTrackingByType(c *gin.Context) {
+func GetTrackingByKey(c *gin.Context) {
 	if GetDB() == nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Status:  "false",
@@ -110,21 +110,21 @@ func GetTrackingByType(c *gin.Context) {
 		})
 		return
 	}
+	query := GetDB().NewSelect().Model(&tracking)
 
-	typeToFind := strings.ToLower(c.Query("type"))
-	if typeToFind == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Type token is required"})
-		return
+	if c.Query("type") != "" {
+		query = query.Where(`LOWER("type") = ?`, strings.ToLower(c.Query("type")))
 	}
 
-	err := GetDB().NewSelect().
-		Model(&tracking).
-		Where(`LOWER("type") = ?`, typeToFind).
-		Scan(context.Background())
+	if c.Query("symbol") != "" {
+		query = query.WhereOr(`LOWER("symbol") = ?`, strings.ToLower(c.Query("symbol")))
+	}
+
+	err := query.Scan(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Status:  "false",
-			Message: "Error retrieving tracking information",
+			Message: "Error getting tracking information",
 		})
 		return
 	}

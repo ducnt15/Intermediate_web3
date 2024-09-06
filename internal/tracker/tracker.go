@@ -69,21 +69,21 @@ func tracker(chainConfig models.ChainConfig) error {
 		return fmt.Errorf("failed to connect: %v", err)
 	}
 
-	chainID, err := client.NetworkID(context.Background())
-	if err != nil {
-		return fmt.Errorf("failed to get chain ID: %v", err)
+	chainID, e := client.NetworkID(context.Background())
+	if e != nil {
+		return fmt.Errorf("failed to get chain ID: %v", e)
 	}
 
-	//header, err := client.HeaderByNumber(context.Background(), nil)
-	//if err != nil {
-	//	return fmt.Errorf("failed to get the latest block header: %v", err)
+	//header, er := client.HeaderByNumber(context.Background(), nil)
+	//if er != nil {
+	//	return fmt.Errorf("failed to get the latest block header: %v", er)
 	//}
 	//blockNumber := header.Number
-	blockNumber := big.NewInt(20677836)
+	blockNumber := big.NewInt(20688778)
 	for {
 		block, err := client.BlockByNumber(context.Background(), blockNumber)
 		if err != nil && err.Error() == ethereum.NotFound.Error() {
-			fmt.Printf("Block %v not found yet. Waiting...", blockNumber)
+			fmt.Printf("Block %v not found yet", blockNumber)
 			time.Sleep(12 * time.Second)
 			continue
 		}
@@ -93,16 +93,16 @@ func tracker(chainConfig models.ChainConfig) error {
 		}
 
 		for _, tx := range block.Transactions() {
-			fmt.Printf("Block: %v, Transaction: %v\n", blockNumber, tx.Hash().Hex())
+			fmt.Printf("Block: %v\n", blockNumber)
 			// check native transfer
 			err = trackingNativeToken(tx, chainConfig, chainID)
 			if err != nil {
 				fmt.Printf("Failed to track native token: %v", err)
 			}
-			// check stable token use logs transfer in transactions
-			er := handleErc20TokenTracking(client, tx, chainConfig)
+			// check erc20 token use logs transfer in transactions
+			er := trackingErc20Token(client, tx, chainConfig)
 			if er != nil {
-				fmt.Printf("failed to handle stable token tracking info: %v", er)
+				fmt.Printf("failed to handle erc20 token tracking info: %v", er)
 			}
 		}
 		blockNumber.Add(blockNumber, big.NewInt(1))
@@ -120,7 +120,7 @@ func trackingNativeToken(tx *types.Transaction, chainConfig models.ChainConfig, 
 	return nil
 }
 
-func handleErc20TokenTracking(client *ethclient.Client, tx *types.Transaction, chainConfig models.ChainConfig) error {
+func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainConfig models.ChainConfig) error {
 	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
 	if err != nil {
 		fmt.Printf("failed to get transaction receipt: %v", err)
@@ -146,6 +146,17 @@ func handleErc20TokenTracking(client *ethclient.Client, tx *types.Transaction, c
 		if err != nil {
 			continue
 		}
+
+		tokenContract, err := token.NewStore(log.Address, client)
+		if err != nil {
+			fmt.Printf("failed to create token contract: %v", err)
+			continue
+		}
+		tokenSymbol, err := tokenContract.Symbol(nil)
+		if err != nil {
+			fmt.Printf("failed to get token symbol: %v", err)
+			continue
+		}
 		decimals := uint8(18)
 		if tokenConfig, ok := chainConfig.TrackingTokensConfig[tokenAddress]; ok {
 			decimals = tokenConfig.Decimals
@@ -159,6 +170,7 @@ func handleErc20TokenTracking(client *ethclient.Client, tx *types.Transaction, c
 			To:              toAddr,
 			Amount:          amountFloat.Text('f', -1),
 			Chain:           chainConfig.Chain,
+			Symbol:          tokenSymbol,
 			Token:           tokenAddress,
 		}
 
@@ -209,6 +221,7 @@ func checkNativeToken(tx *types.Transaction, config models.ChainConfig, chainId 
 		To:              to,
 		Amount:          realValue.Text('f', -1),
 		Chain:           config.Chain,
+		Symbol:          config.ChainSymbol,
 		Token:           "",
 	}
 	fmt.Print(trackingInfo)

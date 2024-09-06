@@ -9,7 +9,7 @@ func RegisterApi(router *gin.Engine) error {
 	trackingGroup := router.Group("/tracking")
 	{
 		trackingGroup.GET("", GetTracking)
-		trackingGroup.GET("/:type", GetTrackingByType)
+		trackingGroup.GET("/:search", GetTrackingByKey)
 		trackingGroup.DELETE("/:transaction", DeleteTrackingTransaction)
 	}
 	return nil

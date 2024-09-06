@@ -34,9 +34,9 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-
 	err = tracker.TrackingToken()
 	if err != nil {
-		fmt.Printf("Error running tracker: %v", err)
+		return
 	}
+
 }

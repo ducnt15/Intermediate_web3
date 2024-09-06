@@ -26,5 +26,6 @@ type TrackingInformation struct {
 	To              string `bun:"to,notnull" json:"to"`
 	Chain           string `bun:"chain,notnull" json:"chain"`
 	Token           string `bun:"token" json:"token"`
+	Symbol          string `bun:"symbol" json:"symbol"`
 	Amount          string `bun:"amount,notnull" json:"amount"`
 }
