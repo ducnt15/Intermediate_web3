@@ -21,6 +21,7 @@ import (
 const (
 	TypeTokenNative = "NativeToken"
 	TypeTokenERC20  = "Erc20Token"
+	BlockNumber     = 20688778
 )
 
 var (
@@ -63,6 +64,17 @@ func loadConfig() (*models.ChainConfig, error) {
 	return config, nil
 }
 
+func TrackingToken() error {
+	if config.Chain == "" {
+		return fmt.Errorf("chain configuration not found")
+	}
+	err := tracker(*config)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func tracker(chainConfig models.ChainConfig) error {
 	client, err := ethclient.Dial(chainConfig.Rpc)
 	if err != nil {
@@ -73,13 +85,7 @@ func tracker(chainConfig models.ChainConfig) error {
 	if e != nil {
 		return fmt.Errorf("failed to get chain ID: %v", e)
 	}
-
-	//header, er := client.HeaderByNumber(context.Background(), nil)
-	//if er != nil {
-	//	return fmt.Errorf("failed to get the latest block header: %v", er)
-	//}
-	//blockNumber := header.Number
-	blockNumber := big.NewInt(20688778)
+	blockNumber := big.NewInt(BlockNumber)
 	for {
 		block, err := client.BlockByNumber(context.Background(), blockNumber)
 		if err != nil && err.Error() == ethereum.NotFound.Error() {
@@ -144,6 +150,7 @@ func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainCo
 		}
 		fromAddr, toAddr, amount, err := checkTransferLog(transfer, chainConfig.Chain)
 		if err != nil {
+			fmt.Printf("failed to check transfer log: %v", err)
 			continue
 		}
 
@@ -158,7 +165,8 @@ func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainCo
 			continue
 		}
 		decimals := uint8(18)
-		if tokenConfig, ok := chainConfig.TrackingTokensConfig[tokenAddress]; ok {
+		tokenConfig, ok := chainConfig.TrackingTokensConfig[tokenAddress]
+		if ok {
 			decimals = tokenConfig.Decimals
 		}
 		amountFloat := new(big.Float).SetInt(amount)
@@ -178,26 +186,6 @@ func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainCo
 		if er != nil {
 			fmt.Printf("failed to save tracking info: %v", er)
 		}
-	}
-	return nil
-}
-
-func TrackingToken() error {
-	if config.Chain == "" {
-		return fmt.Errorf("chain configuration not found")
-	}
-
-	chainConfig := models.ChainConfig{
-		Chain:                config.Chain,
-		Rpc:                  config.Rpc,
-		ChainSymbol:          config.ChainSymbol,
-		UsersTracking:        config.UsersTracking,
-		TrackingTokensConfig: config.TrackingTokensConfig,
-		ListTokensTracking:   config.ListTokensTracking,
-	}
-
-	if err := tracker(chainConfig); err != nil {
-		return err
 	}
 	return nil
 }
@@ -258,7 +246,8 @@ func notifyAndSaveDB(trackingInfo *models.TrackingInformation, chainConfig model
 
 	message := fmt.Sprintf(`Chain: %s
 			Transaction: %s
-			Transfering %s %s from %s to %s`, trackingInfo.Chain,
+			Transfering %s %s
+			From %s to %s`, trackingInfo.Chain,
 		trackingInfo.TransactionHash, trackingInfo.Amount, tokenSymbol, trackingInfo.From, trackingInfo.To)
 
 	err = sendMessage(message)
