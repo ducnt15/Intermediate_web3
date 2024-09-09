@@ -4,6 +4,7 @@ import (
 	"Intermediate_web3/internal/api"
 	"Intermediate_web3/internal/tracker"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
@@ -22,17 +23,17 @@ func main() {
 	}
 	defer api.Close()
 
-	//router := gin.Default()
-	//err = api.RegisterApi(router)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
-	//err = router.Run()
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
+	router := gin.Default()
+	err = api.RegisterApi(router)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = router.Run()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	err = tracker.TrackingToken()
 	if err != nil {
 		return

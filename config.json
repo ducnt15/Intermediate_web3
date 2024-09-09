@@ -1,6 +1,5 @@
 {
   "chain": "ethereum",
-  "rpc": "https://eth-mainnet.nodereal.io/v1/0b60939cd0554f5f9b079641c5be9ff2",
   "chainSymbol": "ETH",
   "usersTracking": "0x0Ebc39a6c92f712761aa8b1A9D84A3D64A3eB5A6",
   "trackingTokensConfig": {

@@ -76,7 +76,7 @@ func TrackingToken() error {
 }
 
 func tracker(chainConfig models.ChainConfig) error {
-	client, err := ethclient.Dial(chainConfig.Rpc)
+	client, err := ethclient.Dial(os.Getenv("RPC"))
 	if err != nil {
 		return fmt.Errorf("failed to connect: %v", err)
 	}

@@ -9,8 +9,8 @@ type TokenConfig struct {
 }
 
 type ChainConfig struct {
-	Chain                string                 `json:"chain"`
-	Rpc                  string                 `json:"rpc"`
+	Chain string `json:"chain"`
+	//Rpc                  string                 `json:"rpc"`
 	ChainSymbol          string                 `json:"chainSymbol"`
 	UsersTracking        string                 `json:"usersTracking"`
 	TrackingTokensConfig map[string]TokenConfig `json:"trackingTokensConfig"`
