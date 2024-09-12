@@ -1,7 +1,8 @@
 package api
 
 import (
-	"Intermediate_web3/internal/models"
+	"Intermediate_web3/pkg/database"
+	"Intermediate_web3/pkg/models"
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -27,7 +28,7 @@ var (
 )
 
 func SaveDB(trackingInfo *models.TrackingInformation) error {
-	_, err := GetDB().NewInsert().Model(trackingInfo).Exec(context.Background())
+	_, err := database.GetDB().NewInsert().Model(trackingInfo).Exec(context.Background())
 	if err != nil {
 		fmt.Println("Error inserting data into database:", err)
 	}
@@ -36,7 +37,7 @@ func SaveDB(trackingInfo *models.TrackingInformation) error {
 
 func GetTracking(c *gin.Context) {
 	// Check for database connection
-	if GetDB() == nil {
+	if database.GetDB() == nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Status:  "false",
 			Message: "Database connection is not initialized",
@@ -47,7 +48,7 @@ func GetTracking(c *gin.Context) {
 
 	page, pageSize := getPageAndSize(c, defaultPage, defaultPageSize)
 
-	totalRecords, err := GetDB().NewSelect().
+	totalRecords, err := database.GetDB().NewSelect().
 		Model((*models.TrackingInformation)(nil)).
 		Count(ctx)
 
@@ -64,10 +65,10 @@ func GetTracking(c *gin.Context) {
 
 	c.JSON(http.StatusOK, Response{
 		Status:  "true",
-		Message: "Get all tracking successfully!",
+		Message: "Get all service successfully!",
 		Data: struct {
 			TotalPages int                          `json:"totalPages"`
-			Tracking   []models.TrackingInformation `json:"tracking"`
+			Tracking   []models.TrackingInformation `json:"service"`
 		}{
 			TotalPages: totalPages,
 			Tracking:   tracking,
@@ -90,7 +91,7 @@ func getPageAndSize(c *gin.Context, defaultPage, defaultPageSize int) (int, int)
 func GetPaginatedTracking(ctx context.Context, page int, pageSize int) ([]models.TrackingInformation, error) {
 	offset := (page - 1) * pageSize
 
-	err := GetDB().NewSelect().
+	err := database.GetDB().NewSelect().
 		Model(&tracking).
 		Limit(pageSize).
 		Offset(offset).
@@ -104,14 +105,14 @@ func GetPaginatedTracking(ctx context.Context, page int, pageSize int) ([]models
 }
 
 func GetTrackingByKey(c *gin.Context) {
-	if GetDB() == nil {
+	if database.GetDB() == nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Status:  "false",
 			Message: "Database connection is not initialized",
 		})
 		return
 	}
-	query := GetDB().NewSelect().Model(&tracking)
+	query := database.GetDB().NewSelect().Model(&tracking)
 
 	if c.Query("type") != "" {
 		query = query.Where(`LOWER("type") = ?`, strings.ToLower(c.Query("type")))
@@ -125,7 +126,7 @@ func GetTrackingByKey(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Status:  "false",
-			Message: "Error getting tracking information",
+			Message: "Error getting service information",
 		})
 		return
 	}
@@ -133,21 +134,21 @@ func GetTrackingByKey(c *gin.Context) {
 	if len(tracking) == 0 {
 		c.JSON(http.StatusNotFound, Response{
 			Status:  "false",
-			Message: "No tracking found with the provided type token value",
+			Message: "No service found with the provided type token value",
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, Response{
 		Status:  "true",
-		Message: "Found tracking successfully!",
+		Message: "Found service successfully!",
 		Data:    tracking,
 	})
 }
 
 func DeleteTrackingTransaction(c *gin.Context) {
 	// Check for database connection
-	if GetDB() == nil {
+	if database.GetDB() == nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Status:  "false",
 			Message: "Database connection is not initialized",
@@ -164,7 +165,7 @@ func DeleteTrackingTransaction(c *gin.Context) {
 		return
 	}
 
-	query := GetDB().
+	query := database.GetDB().
 		NewDelete().
 		Model(&models.TrackingInformation{}).
 		Where(`LOWER("transactionHash") = ?`, transactionToDelete)

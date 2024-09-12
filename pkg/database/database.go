@@ -1,7 +1,7 @@
-package api
+package database
 
 import (
-	"Intermediate_web3/internal/models"
+	"Intermediate_web3/pkg/models"
 	"context"
 	"database/sql"
 	"fmt"

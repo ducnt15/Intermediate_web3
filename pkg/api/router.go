@@ -5,8 +5,8 @@ import (
 )
 
 func RegisterApi(router *gin.Engine) error {
-	// Register tracking routes
-	trackingGroup := router.Group("/tracking")
+	// Register service routes
+	trackingGroup := router.Group("/service")
 	{
 		trackingGroup.GET("", GetTracking)
 		trackingGroup.GET("/:search", GetTrackingByKey)
