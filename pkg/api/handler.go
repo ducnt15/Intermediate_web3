@@ -65,10 +65,10 @@ func GetTracking(c *gin.Context) {
 
 	c.JSON(http.StatusOK, Response{
 		Status:  "true",
-		Message: "Get all service successfully!",
+		Message: "Get all tracking successfully!",
 		Data: struct {
 			TotalPages int                          `json:"totalPages"`
-			Tracking   []models.TrackingInformation `json:"service"`
+			Tracking   []models.TrackingInformation `json:"tracking"`
 		}{
 			TotalPages: totalPages,
 			Tracking:   tracking,
@@ -126,7 +126,7 @@ func GetTrackingByKey(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Status:  "false",
-			Message: "Error getting service information",
+			Message: "Error getting tracking information",
 		})
 		return
 	}
@@ -134,14 +134,14 @@ func GetTrackingByKey(c *gin.Context) {
 	if len(tracking) == 0 {
 		c.JSON(http.StatusNotFound, Response{
 			Status:  "false",
-			Message: "No service found with the provided type token value",
+			Message: "No tracking found with the provided type token value",
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, Response{
 		Status:  "true",
-		Message: "Found service successfully!",
+		Message: "Found tracking successfully!",
 		Data:    tracking,
 	})
 }

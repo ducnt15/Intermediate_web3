@@ -1,6 +1,7 @@
 package service
 
 import (
+	"Intermediate_web3/pkg/api"
 	token "Intermediate_web3/pkg/build"
 	"Intermediate_web3/pkg/models"
 	"context"
@@ -105,7 +106,7 @@ func handlerTracking(chainConfig models.ChainConfig) error {
 			// check build token use logs transfer in transactions
 			err = trackingErc20Token(client, tx, chainConfig)
 			if err != nil {
-				fmt.Printf("failed to handle build token service info: %v", err)
+				fmt.Printf("failed to handle build token tracking info: %v", err)
 			}
 		}
 		blockNumber.Add(blockNumber, big.NewInt(1))
@@ -180,7 +181,7 @@ func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainCo
 		}
 		er = notifyAndSaveDB(&trackingInfo, chainConfig)
 		if er != nil {
-			fmt.Printf("failed to save service info: %v", er)
+			fmt.Printf("failed to save tracking info: %v", er)
 		}
 	}
 	return nil
@@ -217,7 +218,7 @@ func checkTransferLog(transfer *token.StoreTransfer, chain string) (string, stri
 	toAddress := strings.ToLower(transfer.To.Hex())
 
 	if !checkUserTracked(fromAddress, chain) && !checkUserTracked(toAddress, chain) {
-		return "", "", nil, fmt.Errorf("not service this user")
+		return "", "", nil, fmt.Errorf("not tracking this user")
 	}
 	return fromAddress, toAddress, transfer.Value, nil
 }
@@ -235,10 +236,10 @@ func notifyAndSaveDB(trackingInfo *models.TrackingInformation, chainConfig model
 	default:
 	}
 
-	//err := api.SaveDB(trackingInfo)
-	//if err != nil {
-	//	fmt.Printf("failed to save service info: %v", err)
-	//}
+	err := api.SaveDB(trackingInfo)
+	if err != nil {
+		fmt.Printf("failed to save tracking info: %v", err)
+	}
 
 	message := fmt.Sprintf(`Chain: %s
 			Transaction: %s
@@ -246,7 +247,7 @@ func notifyAndSaveDB(trackingInfo *models.TrackingInformation, chainConfig model
 			From %s to %s`, trackingInfo.Chain,
 		trackingInfo.TransactionHash, trackingInfo.Amount, tokenSymbol, trackingInfo.From, trackingInfo.To)
 
-	err := SendMessage(message)
+	err = SendMessage(message)
 	if err != nil {
 		return err
 	}

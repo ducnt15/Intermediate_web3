@@ -1,9 +1,11 @@
 package main
 
 import (
+	"Intermediate_web3/pkg/api"
 	"Intermediate_web3/pkg/database"
 	"Intermediate_web3/pkg/service"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
@@ -22,17 +24,17 @@ func main() {
 	}
 	defer database.Close()
 
-	//router := gin.Default()
-	//err = api.RegisterApi(router)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
-	//err = router.Run()
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
+	router := gin.Default()
+	err = api.RegisterApi(router)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = router.Run()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	err = service.TokenTracking()
 	if err != nil {
 		return
