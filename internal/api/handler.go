@@ -1,8 +1,8 @@
 package api
 
 import (
-	"Intermediate_web3/pkg/database"
-	"Intermediate_web3/pkg/models"
+	"Intermediate_web3/internal/database"
+	"Intermediate_web3/internal/models"
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"

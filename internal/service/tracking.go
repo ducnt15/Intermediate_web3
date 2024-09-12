@@ -1,9 +1,9 @@
 package service
 
 import (
-	"Intermediate_web3/pkg/api"
-	token "Intermediate_web3/pkg/build"
-	"Intermediate_web3/pkg/models"
+	"Intermediate_web3/internal/api"
+	token "Intermediate_web3/internal/build"
+	"Intermediate_web3/internal/models"
 	"context"
 	"encoding/json"
 	"fmt"

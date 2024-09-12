@@ -1,5 +1,5 @@
 .env
 Token.sol
 output
-build
+internal/build/Token_sol_Token.abi
 node_modules

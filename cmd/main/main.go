@@ -1,9 +1,9 @@
 package main
 
 import (
-	"Intermediate_web3/pkg/api"
-	"Intermediate_web3/pkg/database"
-	"Intermediate_web3/pkg/service"
+	"Intermediate_web3/internal/api"
+	"Intermediate_web3/internal/database"
+	"Intermediate_web3/internal/service"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
