@@ -17,7 +17,7 @@ type ChainConfig struct {
 }
 
 type TrackingInformation struct {
-	bun.BaseModel   `bun:"table:service"`
+	bun.BaseModel   `bun:"table:tracking"`
 	ID              int    `bun:",pk,autoincrement"`
 	TransactionHash string `bun:"transactionHash,notnull" json:"transactionHash"`
 	Type            string `bun:"type,notnull" json:"type"`

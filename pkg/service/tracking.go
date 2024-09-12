@@ -1,7 +1,6 @@
 package service
 
 import (
-	"Intermediate_web3/pkg/api"
 	token "Intermediate_web3/pkg/build"
 	"Intermediate_web3/pkg/models"
 	"context"
@@ -236,10 +235,10 @@ func notifyAndSaveDB(trackingInfo *models.TrackingInformation, chainConfig model
 	default:
 	}
 
-	err := api.SaveDB(trackingInfo)
-	if err != nil {
-		fmt.Printf("failed to save service info: %v", err)
-	}
+	//err := api.SaveDB(trackingInfo)
+	//if err != nil {
+	//	fmt.Printf("failed to save service info: %v", err)
+	//}
 
 	message := fmt.Sprintf(`Chain: %s
 			Transaction: %s
@@ -247,7 +246,7 @@ func notifyAndSaveDB(trackingInfo *models.TrackingInformation, chainConfig model
 			From %s to %s`, trackingInfo.Chain,
 		trackingInfo.TransactionHash, trackingInfo.Amount, tokenSymbol, trackingInfo.From, trackingInfo.To)
 
-	err = SendMessage(message)
+	err := SendMessage(message)
 	if err != nil {
 		return err
 	}
