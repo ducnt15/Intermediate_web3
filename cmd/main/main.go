@@ -2,7 +2,7 @@ package main
 
 import (
 	"Intermediate_web3/internal/api"
-	"Intermediate_web3/internal/tracker"
+	"Intermediate_web3/internal/tracking"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -34,7 +34,7 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	err = tracker.TrackingToken()
+	err = tracking.TokenTracking()
 	if err != nil {
 		return
 	}

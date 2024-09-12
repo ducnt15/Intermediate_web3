@@ -1,4 +1,4 @@
-package tracker
+package tracking
 
 import (
 	"Intermediate_web3/internal/api"
@@ -10,10 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"math/big"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -64,18 +62,18 @@ func loadConfig() (*models.ChainConfig, error) {
 	return config, nil
 }
 
-func TrackingToken() error {
+func TokenTracking() error {
 	if config.Chain == "" {
 		return fmt.Errorf("chain configuration not found")
 	}
-	err := tracker(*config)
+	err := handlerTracking(*config)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func tracker(chainConfig models.ChainConfig) error {
+func handlerTracking(chainConfig models.ChainConfig) error {
 	client, err := ethclient.Dial(os.Getenv("RPC"))
 	if err != nil {
 		return fmt.Errorf("failed to connect: %v", err)
@@ -106,9 +104,9 @@ func tracker(chainConfig models.ChainConfig) error {
 				fmt.Printf("Failed to track native token: %v", err)
 			}
 			// check erc20 token use logs transfer in transactions
-			er := trackingErc20Token(client, tx, chainConfig)
-			if er != nil {
-				fmt.Printf("failed to handle erc20 token tracking info: %v", er)
+			err = trackingErc20Token(client, tx, chainConfig)
+			if err != nil {
+				fmt.Printf("failed to handle erc20 token tracking info: %v", err)
 			}
 		}
 		blockNumber.Add(blockNumber, big.NewInt(1))
@@ -145,7 +143,7 @@ func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainCo
 			continue
 		}
 		tokenAddress := strings.ToLower(log.Address.Hex())
-		if !isTokenTracked(tokenAddress, chainConfig.Chain) {
+		if !checkTokenTracked(tokenAddress, chainConfig.Chain) {
 			continue
 		}
 		fromAddr, toAddr, amount, err := checkTransferLog(transfer, chainConfig.Chain)
@@ -193,7 +191,7 @@ func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainCo
 func checkNativeToken(tx *types.Transaction, config models.ChainConfig, chainId *big.Int) *models.TrackingInformation {
 	from, to := getTransactionAddresses(tx, chainId)
 
-	if !isUserTracked(from, config.Chain) && !isUserTracked(to, config.Chain) {
+	if !checkUserTracked(from, config.Chain) && !checkUserTracked(to, config.Chain) {
 		return nil
 	}
 
@@ -220,7 +218,7 @@ func checkTransferLog(transfer *token.StoreTransfer, chain string) (string, stri
 	fromAddress := strings.ToLower(transfer.From.Hex())
 	toAddress := strings.ToLower(transfer.To.Hex())
 
-	if !isUserTracked(fromAddress, chain) && !isUserTracked(toAddress, chain) {
+	if !checkUserTracked(fromAddress, chain) && !checkUserTracked(toAddress, chain) {
 		return "", "", nil, fmt.Errorf("not tracking this user")
 	}
 	return fromAddress, toAddress, transfer.Value, nil
@@ -250,35 +248,34 @@ func notifyAndSaveDB(trackingInfo *models.TrackingInformation, chainConfig model
 			From %s to %s`, trackingInfo.Chain,
 		trackingInfo.TransactionHash, trackingInfo.Amount, tokenSymbol, trackingInfo.From, trackingInfo.To)
 
-	err = sendMessage(message)
+	err = SendMessage(message)
 	if err != nil {
 		return err
 	}
 	return nil
 }
+func getTransactionAddresses(tx *types.Transaction, chainID *big.Int) (string, string) {
+	from, to := "", ""
+	sender, err := types.Sender(types.NewLondonSigner(chainID), tx)
+	if err == nil {
+		from = sender.Hex()
+	}
+	if tx.To() != nil {
+		to = tx.To().Hex()
+	}
+	return strings.ToLower(from), strings.ToLower(to)
+}
 
-func sendMessage(message string) error {
-	TelegramBotToken := os.Getenv("TELEGRAM_BOT_TOKEN")
-	groupIdStr := os.Getenv("TELEGRAM_CHAT_ID")
-	bot, err := tgbotapi.NewBotAPI(TelegramBotToken)
-	if err != nil {
-		fmt.Println(err)
+func checkUserTracked(address string, chain string) bool {
+	address = strings.ToLower(address)
+	trackedUser := mapListTracking[chain].UsersTracking
+	if trackedUser == "" {
+		return false
 	}
-	groupId, err := strconv.ParseInt(groupIdStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("failed to parse GROUPCHAT_ID: %v", err)
-	}
-	chatId, err := strconv.Atoi(strconv.FormatInt(groupId, 10))
-	if err != nil {
-		fmt.Println(err)
-	}
-	// Create a new message to send
-	msg := tgbotapi.NewMessage(int64(chatId), message)
+	return address == strings.ToLower(trackedUser)
+}
 
-	// Send the message
-	_, err = bot.Send(msg)
-	if err != nil {
-		fmt.Println(err)
-	}
-	return nil
+func checkTokenTracked(address, chain string) bool {
+	_, ok := mapListTracking[chain].MapListTokens[address]
+	return ok
 }

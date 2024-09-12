@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/uptrace/bun"
 	"log"
 	"net/http"
 	"strconv"
@@ -46,13 +45,13 @@ func GetTracking(c *gin.Context) {
 
 	page, pageSize := getPageAndSize(c, defaultPage, defaultPageSize)
 
-	totalRecords, err := db.NewSelect().
+	totalRecords, err := GetDB().NewSelect().
 		Model((*models.TrackingInformation)(nil)).
 		Count(ctx)
 
 	totalPages := (totalRecords + pageSize - 1) / pageSize
 
-	tracking, err = GetPaginatedTracking(ctx, db, page, pageSize)
+	tracking, err = GetPaginatedTracking(ctx, page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Status:  "false",
@@ -86,10 +85,10 @@ func getPageAndSize(c *gin.Context, defaultPage, defaultPageSize int) (int, int)
 	return page, pageSize
 }
 
-func GetPaginatedTracking(ctx context.Context, db *bun.DB, page int, pageSize int) ([]models.TrackingInformation, error) {
+func GetPaginatedTracking(ctx context.Context, page int, pageSize int) ([]models.TrackingInformation, error) {
 	offset := (page - 1) * pageSize
 
-	err := db.NewSelect().
+	err := GetDB().NewSelect().
 		Model(&tracking).
 		Limit(pageSize).
 		Offset(offset).
