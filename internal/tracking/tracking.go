@@ -2,7 +2,7 @@ package tracking
 
 import (
 	"Intermediate_web3/internal/api"
-	token "Intermediate_web3/internal/erc20"
+	token "Intermediate_web3/internal/build"
 	"Intermediate_web3/internal/models"
 	"context"
 	"encoding/json"
@@ -103,10 +103,10 @@ func handlerTracking(chainConfig models.ChainConfig) error {
 			if err != nil {
 				fmt.Printf("Failed to track native token: %v", err)
 			}
-			// check erc20 token use logs transfer in transactions
+			// check build token use logs transfer in transactions
 			err = trackingErc20Token(client, tx, chainConfig)
 			if err != nil {
-				fmt.Printf("failed to handle erc20 token tracking info: %v", err)
+				fmt.Printf("failed to handle build token tracking info: %v", err)
 			}
 		}
 		blockNumber.Add(blockNumber, big.NewInt(1))
@@ -179,7 +179,6 @@ func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainCo
 			Symbol:          tokenSymbol,
 			Token:           tokenAddress,
 		}
-
 		er = notifyAndSaveDB(&trackingInfo, chainConfig)
 		if er != nil {
 			fmt.Printf("failed to save tracking info: %v", er)

@@ -17,6 +17,11 @@ type Response struct {
 	Data    interface{} `json:"Data,omitempty"`
 }
 
+const (
+	defaultPage     = 1
+	defaultPageSize = 10
+)
+
 var (
 	tracking []models.TrackingInformation
 )
@@ -39,9 +44,6 @@ func GetTracking(c *gin.Context) {
 		return
 	}
 	ctx := context.Background()
-
-	const defaultPage = 1
-	const defaultPageSize = 10
 
 	page, pageSize := getPageAndSize(c, defaultPage, defaultPageSize)
 
