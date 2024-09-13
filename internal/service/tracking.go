@@ -169,14 +169,14 @@ func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainCo
 		if ok {
 			decimals = tokenConfig.Decimals
 		}
-		amountFloat := new(big.Float).SetInt(amount)
-		amountFloat = new(big.Float).Quo(amountFloat, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil)))
+		amountTransfer := new(big.Float).SetInt(amount)
+		amountTransfer = new(big.Float).Quo(amountTransfer, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil)))
 		trackingInfo := models.TrackingInformation{
 			TransactionHash: tx.Hash().Hex(),
 			Type:            TypeTokenERC20,
 			From:            fromAddr,
 			To:              toAddr,
-			Amount:          amountFloat.Text('f', -1),
+			Amount:          amountTransfer.Text('f', -1),
 			Chain:           chainConfig.Chain,
 			Symbol:          tokenSymbol,
 			Token:           tokenAddress,
