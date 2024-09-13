@@ -25,10 +25,11 @@ const (
 
 var (
 	tracking []models.TrackingInformation
+	ctx      = context.Background()
 )
 
 func SaveDB(trackingInfo *models.TrackingInformation) error {
-	_, err := database.GetDB().NewInsert().Model(trackingInfo).Exec(context.Background())
+	_, err := database.GetDB().NewInsert().Model(trackingInfo).Exec(ctx)
 	if err != nil {
 		fmt.Println("Error inserting data into database:", err)
 	}
@@ -44,8 +45,6 @@ func GetTracking(c *gin.Context) {
 		})
 		return
 	}
-	ctx := context.Background()
-
 	page, pageSize := getPageAndSize(c, defaultPage, defaultPageSize)
 
 	totalRecords, err := database.GetDB().NewSelect().

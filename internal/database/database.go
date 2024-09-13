@@ -20,7 +20,10 @@ func Connect() error {
 		return fmt.Errorf("failed to initialize DB")
 	}
 
-	_, err := db.NewCreateTable().Model((*models.TrackingInformation)(nil)).IfNotExists().Exec(context.Background())
+	_, err := db.NewCreateTable().
+		Model((*models.TrackingInformation)(nil)).
+		IfNotExists().
+		Exec(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to create table: %w", err)
 	}

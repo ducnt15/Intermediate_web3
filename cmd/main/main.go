@@ -35,6 +35,7 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
 	err = service.TokenTracking()
 	if err != nil {
 		return

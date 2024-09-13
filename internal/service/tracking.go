@@ -28,6 +28,7 @@ var (
 		UsersTracking string
 	})
 	config *models.ChainConfig
+	ctx    = context.Background()
 )
 
 func init() {
@@ -79,13 +80,13 @@ func handlerTracking(chainConfig models.ChainConfig) error {
 		return fmt.Errorf("failed to connect: %v", err)
 	}
 
-	chainID, e := client.NetworkID(context.Background())
+	chainID, e := client.NetworkID(ctx)
 	if e != nil {
 		return fmt.Errorf("failed to get chain ID: %v", e)
 	}
 	blockNumber := big.NewInt(BlockNumber)
 	for {
-		block, err := client.BlockByNumber(context.Background(), blockNumber)
+		block, err := client.BlockByNumber(ctx, blockNumber)
 		if err != nil && err.Error() == ethereum.NotFound.Error() {
 			fmt.Printf("Block %v not found yet", blockNumber)
 			time.Sleep(12 * time.Second)
@@ -103,7 +104,7 @@ func handlerTracking(chainConfig models.ChainConfig) error {
 			if err != nil {
 				fmt.Printf("Failed to track native token: %v", err)
 			}
-			// check build token use logs transfer in transactions
+			// check Erc20 token transfer
 			err = trackingErc20Token(client, tx, chainConfig)
 			if err != nil {
 				fmt.Printf("failed to handle build token tracking info: %v", err)
@@ -125,25 +126,26 @@ func trackingNativeToken(tx *types.Transaction, chainConfig models.ChainConfig, 
 }
 
 func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainConfig models.ChainConfig) error {
-	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+	receipt, err := client.TransactionReceipt(ctx, tx.Hash())
 	if err != nil {
 		fmt.Printf("failed to get transaction receipt: %v", err)
 		return err
 	}
 
 	for _, log := range receipt.Logs {
-		tokenFilterer, er := token.NewStoreFilterer(log.Address, client)
-		if er != nil {
+		tokenFilterer, err := token.NewStoreFilterer(log.Address, client)
+		if err != nil {
 			fmt.Printf("failed to create token filterer: %v", err)
 			continue
 		}
-		transfer, e := tokenFilterer.ParseTransfer(*log)
-		if e != nil {
-			fmt.Printf(e.Error())
+		transfer, err := tokenFilterer.ParseTransfer(*log)
+		if err != nil {
+			fmt.Printf(err.Error())
 			continue
 		}
 		tokenAddress := strings.ToLower(log.Address.Hex())
-		if !checkTokenTracked(tokenAddress, chainConfig.Chain) {
+		_, ok := mapListTracking[chainConfig.Chain].MapListTokens[tokenAddress]
+		if !ok {
 			continue
 		}
 		fromAddr, toAddr, amount, err := checkTransferLog(transfer, chainConfig.Chain)
@@ -179,9 +181,9 @@ func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainCo
 			Symbol:          tokenSymbol,
 			Token:           tokenAddress,
 		}
-		er = notifyAndSaveDB(&trackingInfo, chainConfig)
-		if er != nil {
-			fmt.Printf("failed to save tracking info: %v", er)
+		err = notifyAndSaveDB(&trackingInfo, chainConfig)
+		if err != nil {
+			fmt.Printf("failed to save tracking info: %v", err)
 		}
 	}
 	return nil
@@ -198,13 +200,13 @@ func checkNativeToken(tx *types.Transaction, config models.ChainConfig, chainId 
 		return nil
 	}
 
-	realValue := new(big.Float).Quo(new(big.Float).SetInt(tx.Value()), big.NewFloat(1e18))
+	value := new(big.Float).Quo(new(big.Float).SetInt(tx.Value()), big.NewFloat(1e18))
 	trackingInfo := &models.TrackingInformation{
 		TransactionHash: tx.Hash().Hex(),
 		Type:            TypeTokenNative,
 		From:            from,
 		To:              to,
-		Amount:          realValue.Text('f', -1),
+		Amount:          value.Text('f', -1),
 		Chain:           config.Chain,
 		Symbol:          config.ChainSymbol,
 		Token:           "",
@@ -259,9 +261,7 @@ func getTransactionAddresses(tx *types.Transaction, chainID *big.Int) (string, s
 	if err == nil {
 		from = sender.Hex()
 	}
-	if tx.To() != nil {
-		to = tx.To().Hex()
-	}
+	to = tx.To().Hex()
 	return strings.ToLower(from), strings.ToLower(to)
 }
 
@@ -272,9 +272,4 @@ func checkUserTracked(address string, chain string) bool {
 		return false
 	}
 	return address == strings.ToLower(trackedUser)
-}
-
-func checkTokenTracked(address, chain string) bool {
-	_, ok := mapListTracking[chain].MapListTokens[address]
-	return ok
 }
