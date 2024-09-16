@@ -35,7 +35,8 @@ func init() {
 	var err error
 	config, err = loadConfig()
 	if err != nil {
-		panic(err)
+		fmt.Println("load config err:", err)
+		return
 	}
 	mapListTracking[config.Chain] = struct {
 		MapListTokens map[string]bool
@@ -107,7 +108,7 @@ func handlerTracking(chainConfig models.ChainConfig) error {
 			// check Erc20 token transfer
 			err = trackingErc20Token(client, tx, chainConfig)
 			if err != nil {
-				fmt.Printf("failed to handle build token tracking info: %v", err)
+				fmt.Printf("Failed to track ERC20 token: %v", err)
 			}
 		}
 		blockNumber.Add(blockNumber, big.NewInt(1))
@@ -211,7 +212,6 @@ func checkNativeToken(tx *types.Transaction, config models.ChainConfig, chainId 
 		Symbol:          config.ChainSymbol,
 		Token:           "",
 	}
-	fmt.Print(trackingInfo)
 	return trackingInfo
 }
 
