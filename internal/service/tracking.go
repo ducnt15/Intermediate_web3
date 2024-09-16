@@ -116,12 +116,31 @@ func handlerTracking(chainConfig models.ChainConfig) error {
 }
 
 func trackingNativeToken(tx *types.Transaction, chainConfig models.ChainConfig, chainID *big.Int) error {
-	nativeTransfer := checkNativeToken(tx, chainConfig, chainID)
-	if nativeTransfer != nil {
-		err := notifyAndSaveDB(nativeTransfer, chainConfig)
-		if err != nil {
-			return err
-		}
+	from, to := getTransactionAddresses(tx, chainID)
+
+	if !checkUserTracked(from, config.Chain) && !checkUserTracked(to, config.Chain) {
+		return nil
+	}
+
+	if tx.Value().Cmp(big.NewInt(0)) < 1 {
+		return nil
+	}
+
+	value := new(big.Float).Quo(new(big.Float).SetInt(tx.Value()), big.NewFloat(1e18))
+	trackingInfo := &models.TrackingInformation{
+		TransactionHash: tx.Hash().Hex(),
+		Type:            TypeTokenNative,
+		From:            from,
+		To:              to,
+		Amount:          value.Text('f', -1),
+		Chain:           config.Chain,
+		Symbol:          config.ChainSymbol,
+		Token:           "",
+	}
+
+	err := notifyAndSaveDB(trackingInfo, chainConfig)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -188,31 +207,6 @@ func trackingErc20Token(client *ethclient.Client, tx *types.Transaction, chainCo
 		}
 	}
 	return nil
-}
-
-func checkNativeToken(tx *types.Transaction, config models.ChainConfig, chainId *big.Int) *models.TrackingInformation {
-	from, to := getTransactionAddresses(tx, chainId)
-
-	if !checkUserTracked(from, config.Chain) && !checkUserTracked(to, config.Chain) {
-		return nil
-	}
-
-	if tx.Value().Cmp(big.NewInt(0)) < 1 {
-		return nil
-	}
-
-	value := new(big.Float).Quo(new(big.Float).SetInt(tx.Value()), big.NewFloat(1e18))
-	trackingInfo := &models.TrackingInformation{
-		TransactionHash: tx.Hash().Hex(),
-		Type:            TypeTokenNative,
-		From:            from,
-		To:              to,
-		Amount:          value.Text('f', -1),
-		Chain:           config.Chain,
-		Symbol:          config.ChainSymbol,
-		Token:           "",
-	}
-	return trackingInfo
 }
 
 func checkTransferLog(transfer *token.StoreTransfer, chain string) (string, string, *big.Int, error) {
